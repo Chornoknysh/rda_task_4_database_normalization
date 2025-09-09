@@ -1,25 +1,25 @@
--- 1. Пересоздаємо базу
-DROP DATABASE IF EXISTS ShopDB;
+-- 1. Пересоздаємо базу (строго за чеклістом)
+DROP DATABASE ShopDB;
 CREATE DATABASE ShopDB;
 USE ShopDB;
 
--- 2. Таблиці з ENGINE=InnoDB, NOT NULL/UNIQUE та UNSIGNED для кількості
+-- 2. Нормалізована структура з усіма обмеженнями та InnoDB
 
--- 2.1 Країни
+-- 2.1 Countries
 CREATE TABLE Countries (
   ID INT NOT NULL AUTO_INCREMENT,
   Name VARCHAR(50) NOT NULL UNIQUE,
   PRIMARY KEY (ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2.2 Продукти
+-- 2.2 Products
 CREATE TABLE Products (
   ID INT NOT NULL AUTO_INCREMENT,
-  Name VARCHAR(50) NOT NULL UNIQUE,
+  ProductName VARCHAR(50) NOT NULL UNIQUE,
   PRIMARY KEY (ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2.3 Склади
+-- 2.3 Warehouses
 CREATE TABLE Warehouses (
   ID INT NOT NULL AUTO_INCREMENT,
   Name VARCHAR(50) NOT NULL,
@@ -32,11 +32,11 @@ CREATE TABLE Warehouses (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2.4 Інвентар
+-- 2.4 Inventory
 CREATE TABLE Inventory (
   ProductID INT NOT NULL,
   WarehouseID INT NOT NULL,
-  WarehouseAmount INT UNSIGNED NOT NULL,
+  Quantity INT UNSIGNED NOT NULL,
   PRIMARY KEY (ProductID, WarehouseID),
   CONSTRAINT fk_inventory_product
     FOREIGN KEY (ProductID) REFERENCES Products(ID)
@@ -54,25 +54,25 @@ INSERT INTO Countries (ID, Name) VALUES
   (1, 'Country1'),
   (2, 'Country2');
 
-INSERT INTO Products (ID, Name) VALUES
+INSERT INTO Products (ID, ProductName) VALUES
   (1, 'AwersomeProduct');
 
 INSERT INTO Warehouses (ID, Name, Address, CountryID) VALUES
   (1, 'Warehouse-1', 'City-1, Street-1', 1),
   (2, 'Warehouse-2', 'City-2, Street-2', 2);
 
-INSERT INTO Inventory (ProductID, WarehouseID, WarehouseAmount) VALUES
+INSERT INTO Inventory (ProductID, WarehouseID, Quantity) VALUES
   (1, 1, 2),
   (1, 2, 5);
 
--- 4. VIEW для сумісності зі старим тестовим скриптом
+-- 4. VIEW ProductInventory для сумісності з тестовим скриптом
 CREATE VIEW ProductInventory AS
 SELECT
   (@rownum := @rownum + 1) AS ID,
-  p.Name           AS ProductName,
-  i.WarehouseAmount,
-  w.Name           AS WarehouseName,
-  w.Address        AS WarehouseAddress,
+  p.ProductName       AS ProductName,
+  i.Quantity          AS WarehouseAmount,
+  w.Name              AS WarehouseName,
+  w.Address           AS WarehouseAddress,
   w.CountryID
 FROM (SELECT @rownum := 0) AS init
 JOIN Inventory i
@@ -82,4 +82,3 @@ JOIN Products p
 JOIN Warehouses w
   ON i.WarehouseID = w.ID
 ORDER BY i.ProductID, i.WarehouseID;
-
